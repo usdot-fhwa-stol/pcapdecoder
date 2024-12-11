@@ -4,6 +4,27 @@ import sys
 from time import sleep
 from binascii import unhexlify
 from collections import defaultdict
+
+def checkMessage(line):
+    tempFrame = line[6:]
+    if (len(tempFrame.strip('\n')) > 510):
+        frameSize = 8
+        encodedSize = int(line[5:8], 16) * 2
+    else: 
+        frameSize = 6
+        encodedSize = int(line[4:6], 16) * 2
+
+    print("Size encoded in message: ", encodedSize)
+    print("Checking against frame size starting at index: ", frameSize)
+    newFrame = line[frameSize:].strip('\n')
+    print("Frame under test: ", newFrame)
+    print("Frame size: ", len(newFrame))
+    if (encodedSize == len(newFrame)):
+        print("Valid message, continuing.")
+        return True
+    else:
+        print("Not a valid message, skipping.")
+        return False
     
 def fixBSMID(seq, bsm):
     bsmId = seq()['value'][1]['coreData']['id']
@@ -22,6 +43,16 @@ def fixTIMID(seq, tim):
     begID = tim.find("b'") + 2
     endID = tim.find("'", begID)
     newString = tim[:begID-2] + str(timId) + tim[endID+1:]
+
+    return newString
+
+def fixSDSMID(seq, sdsm):
+    sdsmId = seq()['value'][1]['sourceID']
+    sdsmId = sdsmId.hex()
+
+    begID = sdsm.find("b'") + 2
+    endID = sdsm.find("'", begID)
+    newString = sdsm[:begID-2] + str(sdsmId) + sdsm[endID+1:]
 
     return newString
     
@@ -55,6 +86,11 @@ def fix(hexPayload, seq, strId):
         fixedTIM = fixTIMID(seq, strId)
 
         return fixedTIM
+    
+    elif (hexPayload[:4] == "0029"):
+        fixedSDSM = fixSDSMID(seq, strId)
+
+        return fixedSDSM
 
     elif (hexPayload[:4] == "00f4"):
         reqid = seq()['value'][1]['body'][1]['reqid']
@@ -97,7 +133,7 @@ def main():
     fileName = 'decoded_' + sys.argv[1].replace('pcap', 'txt')
     w = open(fileName, 'w')
 
-    msgIds=['0012', '0013', '0014', '001f', '0020'] # this can be updated to include other PSIDs
+    msgIds=['0012', '0013', '0014', '001f', '0020', '0029'] # this can be updated to include other PSIDs
     decoded_msgId_count = defaultdict(int)  # Dictionary to track decoded msgId and their counts
 
     print('Processing...\n')
@@ -106,26 +142,28 @@ def main():
         for id1 in msgIds:
             idx = line.find(id1)
             if  (idx != -1 and idx < 50 and idx > 24):
-                print(line[idx:])
-                w.write(line[idx:])
                 data = line[idx:].strip('\n')
-                # send Hex string to port
-                decode.from_uper(unhexlify(data))
-                decodedStr = str(decode())
+                print("Found: ", data)
+                validity = checkMessage(line[idx:])
+                if (validity == True):
+                    w.write(data)
+                    decode.from_uper(unhexlify(data))
+                    decodedStr = str(decode())
 
-                # if no issues with decoding, print
-                if "b'" not in decodedStr: 
-                    print(decodedStr, '\n')
-                    w.write(decodedStr)
-                    w.write('\n')
-                    decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
+                    # If no issues with decoding, print
+                    if "b'" not in decodedStr: 
+                        print(decodedStr, '\n')
+                        w.write(decodedStr)
+                        w.write('\n')
+                        decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
 
-                # decoding issues found, fix and update message
-                else: 
-                    print('\n', fix(data, decode, decodedStr), '\n')
-                    w.write(fix(data, decode, decodedStr))
-                    w.write('\n')
-                    decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
+                    # Decoding issues found, fix and update message
+                    else: 
+                        print('\n', fix(data, decode, decodedStr), '\n')
+                        w.write(fix(data, decode, decodedStr))
+                        w.write('\n')
+                        decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
+                else: continue
 
     # Write the decoded message IDs and their counts to the output file
     w.write('\nDecoded Message ID Counts:\n')
