@@ -28,4 +28,4 @@ sudo ./install_dependencies.sh
 3. Follow the on-screen prompts.
 
 ### Version
-Version 1.2 – September 3, 2024
+Version 1.2 – December 11, 2024
