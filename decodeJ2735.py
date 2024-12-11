@@ -1,5 +1,5 @@
 # Classic J2735 Payload Decoder - Single Message
-import J2735_201603_2023_02_21
+import J2735_201603_2023_06_22
 import sys
 from time import sleep
 from binascii import unhexlify
@@ -89,7 +89,7 @@ def fix(hexPayload, seq, strId):
 
 def main():
 
-    decode = J2735_201603_2023_02_21.DSRC.MessageFrame
+    decode = J2735_201603_2023_06_22.DSRC.MessageFrame
     f = open('pcap.txt', 'r')
     Lines = f.readlines()
     f.close()
