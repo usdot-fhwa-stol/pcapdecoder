@@ -1,11 +1,24 @@
 # Classic J2735 Payload Decoder - Single Message
 import J2735_201603_2023_06_22
 import sys
-from time import sleep
 from binascii import unhexlify
 from collections import defaultdict
 
-def checkMessage(line):
+def readLines():
+    f = open('pcap.txt', 'r')
+    Lines = f.readlines()
+    f.close()
+
+    return Lines
+
+def writeIds(w, msgId_count):
+    w.write('\nDecoded Message ID Counts:\n')
+    print('\nDecoded Message ID Counts:')
+    for msgId, count in msgId_count.items():
+        w.write(f'{msgId}: {count}\n')
+        print(f'{msgId}: {count}')
+
+def isValidMessage(line):
     tempFrame = line[6:]
     if (len(tempFrame.strip('\n')) > 510):
         frameSize = 8
@@ -14,16 +27,10 @@ def checkMessage(line):
         frameSize = 6
         encodedSize = int(line[4:6], 16) * 2
 
-    print("Size encoded in message: ", encodedSize)
-    print("Checking against frame size starting at index: ", frameSize)
     newFrame = line[frameSize:].strip('\n')
-    print("Frame under test: ", newFrame)
-    print("Frame size: ", len(newFrame))
     if (encodedSize == len(newFrame)):
-        print("Valid message, continuing.")
         return True
     else:
-        print("Not a valid message, skipping.")
         return False
     
 def fixBSMID(seq, bsm):
@@ -122,61 +129,52 @@ def fix(hexPayload, seq, strId):
         print("ID fix not included in filters yet. Unfixed message:\n")
         print(strId, "\n")
 
+def decode(data, frame, w, msgId_count, id):
+    w.write(data)
+    w.write('\n')
+    print(data)
+    frame.from_uper(unhexlify(data))
+    decodedStr = str(frame())
+
+    # If no issues with decoding, print
+    if "b'" not in decodedStr:
+        print(decodedStr, '\n')
+        w.write(decodedStr)
+        w.write('\n')
+        msgId_count[id] += 1  # increment count for successfully decoded msgId
+
+    # Decoding issues found, fix and update message
+    else:
+        print('\n', fix(data, frame, decodedStr), '\n')
+        w.write(fix(data, frame, decodedStr))
+        w.write('\n')
+        msgId_count[id] += 1  # increment count for successfully decoded msgId
 
 def main():
-
-    decode = J2735_201603_2023_06_22.DSRC.MessageFrame
-    f = open('pcap.txt', 'r')
-    Lines = f.readlines()
-    f.close()
-
+    frame = J2735_201603_2023_06_22.DSRC.MessageFrame
     fileName = 'decoded_' + sys.argv[1].replace('pcap', 'txt')
     w = open(fileName, 'w')
-
-    msgIds=['0012','0013','0014','001f','0020','0029'] # this can be updated to include other PSIDs
-    decoded_msgId_count = defaultdict(int)  # Dictionary to track decoded msgId and their counts
+    msgIds = ['0012','0013','0014','001f','0020','0029'] # this can be updated to include other PSIDs
+    msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
 
     print('Processing...')
-    sleep(0.5)
-    for line in Lines:
-        for id1 in msgIds:
-            idx = line.find(id1)
+    for line in readLines():
+        for id in msgIds:
+            idx = line.find(id)
             if (idx != -1):
                 data = line[idx:].strip('\n')
-                print("Found: ", data)
-                validity = checkMessage(line[idx:])
-                if (validity == True):
+                if (isValidMessage(data) == True):
                     try:
-                        w.write(data)
-                        decode.from_uper(unhexlify(data))
+                        decode(data, frame, w, msgId_count, id)
                     except: continue
-                    decodedStr = str(decode())
-
-                    # If no issues with decoding, print
-                    if "b'" not in decodedStr: 
-                        print(decodedStr, '\n')
-                        w.write(decodedStr)
-                        w.write('\n')
-                        decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
-
-                    # Decoding issues found, fix and update message
-                    else: 
-                        print('\n', fix(data, decode, decodedStr), '\n')
-                        w.write(fix(data, decode, decodedStr))
-                        w.write('\n')
-                        decoded_msgId_count[id1] += 1  # Increment count for successfully decoded msgId
-                else: continue
+            else: continue
 
     # Write the decoded message IDs and their counts to the output file
-    w.write('\nDecoded Message ID Counts:\n')
-    print('\nDecoded Message ID Counts:')
-    for msgId, count in decoded_msgId_count.items():
-        w.write(f'{msgId}: {count} times\n')
-        print(f'{msgId}: {count} times')
-
+    writeIds(w, msgId_count)
     w.close()
-    print('Decoding Complete. Check', fileName, '\n')
-    sys.exit(0)  # Automatically terminate the program after completion
+
+    print('\nDecoding Complete. Check', fileName, '\n')
+    sys.exit(0)
 
 if __name__=="__main__":
     main()
