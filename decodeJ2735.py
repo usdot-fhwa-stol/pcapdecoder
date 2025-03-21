@@ -133,15 +133,15 @@ def main():
     fileName = 'decoded_' + sys.argv[1].replace('pcap', 'txt')
     w = open(fileName, 'w')
 
-    msgIds=['0012', '0013', '0014', '001f', '0020', '0029'] # this can be updated to include other PSIDs
+    msgIds=['0012','0013','0014','001f','0020','0029'] # this can be updated to include other PSIDs
     decoded_msgId_count = defaultdict(int)  # Dictionary to track decoded msgId and their counts
 
-    print('Processing...\n')
+    print('Processing...')
     sleep(0.5)
     for line in Lines:
         for id1 in msgIds:
             idx = line.find(id1)
-            if  (idx != -1 and idx < 50 and idx > 24):
+            if (idx != -1):
                 data = line[idx:].strip('\n')
                 print("Found: ", data)
                 validity = checkMessage(line[idx:])
