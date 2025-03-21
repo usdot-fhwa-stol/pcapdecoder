@@ -20,7 +20,7 @@ sudo ./install_dependencies.sh
 
 ## Usage
 
-1. Move your PCAP file to this directory.
+1. Move your PCAP file containing J2735 messages to this directory.
 2. Execute the script:
 ```
 ./pcapDecoder.sh
@@ -28,4 +28,4 @@ sudo ./install_dependencies.sh
 3. Follow the on-screen prompts.
 
 ### Version
-Version 1.2 – December 11, 2024
+Version 1.3 – March 21, 2025
