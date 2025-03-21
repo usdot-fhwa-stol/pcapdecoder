@@ -20,12 +20,14 @@ sudo ./install_dependencies.sh
 
 ## Usage
 
-1. Move your PCAP file containing J2735 messages to this directory.
+1. Move your PCAP file containing J2735 messages to the `logs` directory.
 2. Execute the script:
 ```
+cd src
 ./pcapDecoder.sh
 ```
 3. Follow the on-screen prompts.
+4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the `decoded` directory.
 
 ### Version
 Version 1.3 – March 21, 2025

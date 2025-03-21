@@ -1,11 +1,20 @@
-# Classic J2735 Payload Decoder - Single Message
 import J2735_201603_2023_06_22
 import sys
 from binascii import unhexlify
 from collections import defaultdict
 
+def formatFileName():
+    fileList = sys.argv[1].split('/')
+    file = fileList[-1]
+    fileName = 'decoded_' + file.replace('.pcap', '.txt')
+
+    return fileName
+
 def readLines():
-    f = open('pcap.txt', 'r')
+    fileList = sys.argv[1].split('/')
+    fileList[-1] = "pcap.txt"
+    inputFile = "/".join(fileList)
+    f = open(inputFile, 'r')
     Lines = f.readlines()
     f.close()
 
@@ -152,12 +161,11 @@ def decode(data, frame, w, msgId_count, id):
 
 def main():
     frame = J2735_201603_2023_06_22.DSRC.MessageFrame
-    fileName = 'decoded_' + sys.argv[1].replace('pcap', 'txt')
-    w = open(fileName, 'w')
-    msgIds = ['0012','0013','0014','001f','0020','0029'] # this can be updated to include other PSIDs
+    msgIds = ['0012','0013','0014','001f','0020','0029'] # can be updated to include other PSIDs
     msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
+    fileName = formatFileName()
+    w = open(fileName, 'w')
 
-    print('Processing...')
     for line in readLines():
         for id in msgIds:
             idx = line.find(id)
