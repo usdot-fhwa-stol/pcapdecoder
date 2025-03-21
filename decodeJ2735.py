@@ -146,8 +146,10 @@ def main():
                 print("Found: ", data)
                 validity = checkMessage(line[idx:])
                 if (validity == True):
-                    w.write(data)
-                    decode.from_uper(unhexlify(data))
+                    try:
+                        w.write(data)
+                        decode.from_uper(unhexlify(data))
+                    except: continue
                     decodedStr = str(decode())
 
                     # If no issues with decoding, print
