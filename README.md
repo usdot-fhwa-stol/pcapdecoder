@@ -2,7 +2,7 @@
 
 This script decodes PCAP files containing SAE J2735 messages. The decoded output is displayed in the terminal and saved to a file with the same name as the original PCAP file.
 
-**Note:** The script currently outputs data in a dictionary format. Support for JSON and XML formats will be added soon.
+**Note:** The script currently outputs data as a JSON. Support for XML will be added soon.
 
 ## Supported Platforms
 - **Linux** (Primary)
@@ -30,4 +30,4 @@ cd src
 4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the `decoded` directory.
 
 ### Version
-Version 1.3 – March 21, 2025
+Version 1.4 – March 24, 2025
