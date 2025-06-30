@@ -11,7 +11,8 @@ This script decodes PCAP files containing SAE J2735 messages. The decoded output
 ## Prerequisites
 
 - Python 3
-- Tshark
+- tkinter
+- pyshark
 
 To install the necessary dependencies, run:
 ```
@@ -24,10 +25,10 @@ sudo ./install_dependencies.sh
 2. Execute the script:
 ```
 cd src
-./pcapDecoder.sh
+./pcapDecode.py
 ```
 3. Follow the on-screen prompts.
 4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the `decoded` directory.
 
 ### Version
-Version 1.4 – March 24, 2025
+Version 1.5 – June 30, 2025

@@ -8,8 +8,8 @@ apt-get update
 
 # Dependencies
 dependencies="python3 \
-               python3-tk \
-               pyshark"
+               python3-tk"
 
 # Install dependencies, packages
 apt-get -y install $dependencies
+pip3 install pyshark

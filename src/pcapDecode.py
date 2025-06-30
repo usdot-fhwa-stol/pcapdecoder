@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import J2735_201603_2023_06_22
 import os, sys, json, pyshark
 from binascii import unhexlify
