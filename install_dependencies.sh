@@ -8,7 +8,8 @@ apt-get update
 
 # Dependencies
 dependencies="python3 \
-    tshark"
+               python3-tk \
+               pyshark"
 
 # Install dependencies, packages
 apt-get -y install $dependencies
