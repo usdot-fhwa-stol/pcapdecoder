@@ -1,22 +1,16 @@
 # PCAP Decoder for SAE J2735 Messages
-
 This script decodes PCAP files containing SAE J2735 messages. The decoded output is displayed in the terminal and saved to a file with the same name as the original PCAP file.
 
-**Note:** The script currently outputs data as a JSON. Support for XML will be added soon.
-
-## Supported Platforms
-- **Linux** (Primary)
-- **Windows and macOS** (Adaptation possible)
+**Note:** The script currently outputs data as a JSON. Support for XML is possible if requested.
 
 ## Prerequisites
-
-- Python 3
 - tkinter
-- pyshark
-
-To install the necessary dependencies, run:
 ```
-sudo ./install_dependencies.sh
+sudo apt-get install python3-tk
+```
+- pyshark
+```
+pip3 install pyshark
 ```
 
 ## Usage
@@ -31,4 +25,4 @@ cd src
 4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the `decoded` directory.
 
 ### Version
-Version 1.5 – June 30, 2025
+Version 2.0 – Aug 19, 2025
