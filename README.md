@@ -15,14 +15,14 @@ pip3 install pyshark
 
 ## Usage
 
-1. Move your PCAP file containing J2735 messages to the `logs` directory.
+1. Move your PCAP file containing J2735 messages to the [logs](/logs) directory.
 2. Execute the script:
 ```
 cd src
 ./pcapDecode.py
 ```
 3. Follow the on-screen prompts.
-4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the `decoded` directory.
+4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the [decoded](/decoded) directory.
 
 ### Version
 Version 2.0 – Aug 19, 2025
