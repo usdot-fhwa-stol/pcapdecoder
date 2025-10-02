@@ -6,12 +6,12 @@ sudo apt-get update
 # Dependencies
 dependencies="python3 \
     python3-pip \
+    python3-tk \
     git"
 
 # Required python packages
 python_packages="pycrate \
-    pyshark \
-    tkinter"
+    pyshark"
 
 # Install dependencies, packages
 sudo apt-get install -y $dependencies
