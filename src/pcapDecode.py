@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import J2735_202409
+import j2735_202409
 import os, sys
 import decoder_helper
 from collections import defaultdict
 
 def main():
     # Initialize the message frame and ID tracking
-    frame = J2735_202409.MessageFrame.MessageFrame
+    frame = j2735_202409.MessageFrame.MessageFrame
     msgIds = ['0012','0013','0014','001f','0020','0029'] # can be updated to include other PSIDs
     msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
 
@@ -14,7 +14,7 @@ def main():
     file = decoder_helper.browse_file()
     if not file:
         raise ValueError("No file selected. Exiting.")
-    
+
     # Make sure the decoded directory exists alongside src
     srcDir     = os.path.dirname(os.path.abspath(__file__))
     decodedDir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
