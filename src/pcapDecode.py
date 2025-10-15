@@ -36,9 +36,8 @@ def main():
             idx = line.find(id)
             if (idx != -1):
                 data = line[idx:]
-                if decoder_helper.isValidMsgSize(data):
-                    if not decoder_helper.isBSMPSID(data):
-                        decoder_helper.decode(data, frame, w, msgId_count, id)
+                if not decoder_helper.isBSMPSID(data):
+                    decoder_helper.decode(data, frame, w, msgId_count, id)
 
     # Write the decoded message IDs and their counts to the output file
     decoder_helper.writeIds(w, msgId_count)
