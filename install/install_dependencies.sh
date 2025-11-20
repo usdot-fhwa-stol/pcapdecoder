@@ -7,6 +7,7 @@ sudo apt-get update
 dependencies="python3 \
     python3-pip \
     python3-tk \
+    tshark \
     git"
 
 # Required python packages

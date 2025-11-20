@@ -3,12 +3,27 @@ import j2735_202409
 import os, sys
 import decoder_helper
 from collections import defaultdict
+from binascii import unhexlify
+import contextlib
+import io
+from enum import Enum
+
+class MsgID(Enum):
+    MAP  = "0012"
+    SPAT = "0013"
+    BSM  = "0014"
+    SRM  = "001d"
+    SSM  = "001e"
+    TIM  = "001f"
+    PSM  = "0020"
+    SDSM = "0029"
 
 def main():
     # Initialize the message frame and ID tracking
     frame = j2735_202409.MessageFrame.MessageFrame
-    msgIds = ['0012','0013','0014','001f','0020','0029'] # can be updated to include other PSIDs
+    msgIds = list(MsgID)  # All message ID types from Enum
     msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
+    msgId_timestamps = defaultdict(list)  # track timestamps for IPG calculation
 
     # Browse for the PCAP file
     file = decoder_helper.browse_file()
@@ -30,17 +45,36 @@ def main():
     if not packets:
         raise ValueError("No UDP packets found in the selected file. Exiting.")
 
-    # Process each packet
-    for line in packets:
-        for id in msgIds:
-            idx = line.find(id)
-            if (idx != -1):
-                data = line[idx:]
-                if not decoder_helper.isBSMPSID(data):
-                    decoder_helper.decode(data, frame, w, msgId_count, id)
+    # Iterate per timestamp preserving chronological order
+    for timestamp in sorted(packets.keys()):
+        payload_list = packets[timestamp]
+        for line in payload_list:
+            lower_line = line.lower()
+            half_limit = len(lower_line) // 2
+            for msg_id in msgIds:
+                pos = 0
+                search_limit = half_limit
+                while pos <= search_limit:
+                    idx = lower_line.find(msg_id.value, pos, search_limit + 1)
+                    if idx == -1:
+                        break
+                    buf = lower_line[idx:].strip('\n')
+                    try:
+                        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                            frame.from_uper(unhexlify(buf))
+                    except Exception:
+                        # Advance past this occurrence to look for another instance.
+                        pos = idx + len(msg_id.value)
+                        continue
+                    # Successful decode; record and stop scanning this msg_id for current line.
+                    decoder_helper.decode(buf, frame, w, msgId_count, msg_id, timestamp, msgId_timestamps)
+                    break
 
     # Write the decoded message IDs and their counts to the output file
     decoder_helper.writeIds(w, msgId_count)
+    
+    # Calculate and write IPG statistics
+    decoder_helper.writeIpgStats(w, msgId_timestamps)
     w.close()
 
     print('\nDecoding Complete. Check', decodedFile, '\n')
