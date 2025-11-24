@@ -67,7 +67,7 @@ def main():
                         pos = idx + len(msg_id.value)
                         continue
                     # Successful decode; record and stop scanning this msg_id for current line.
-                    decoder_helper.decode(buf, frame, w, msgId_count, msg_id, timestamp, msgId_timestamps)
+                    decoder_helper.decode(buf, frame, w, msgId_count, msg_id.value, timestamp, msgId_timestamps)
                     break
 
     # Write the decoded message IDs and their counts to the output file

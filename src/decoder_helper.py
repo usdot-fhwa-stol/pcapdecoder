@@ -41,7 +41,11 @@ def output(message: str, w: TextIOWrapper | None = None, newline: bool = True, f
                 pass
 
 def browse_file() -> str:
-    """Open file dialog and return the selected file path"""
+    """Open file dialog and return the selected file path
+    
+    Returns:
+        str: The selected file path.
+    """
     root = Tk()
     root.withdraw()
     srcDir = os.path.dirname(os.path.abspath(__file__))
@@ -66,9 +70,11 @@ def formatFileName(file: str) -> str:
 def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     """Extract hex payloads from a PCAP with their timestamps.
 
-    Returns a mapping of packet timestamp (epoch seconds) to a list of one or
-    more hex payload strings observed at that exact timestamp. Multiple payloads
-    can share the same timestamp at sub-second precision depending on capture.
+    Parameters:
+        pcap_file (str): The path to the PCAP file.
+
+    Returns:
+        dict[float, list[str]]: Mapping of packet timestamps to lists of hex payloads.
     """
     output(f'Extracting packets from {pcap_file}...')
     def _clean_hex(s: str | None) -> str | None:
@@ -79,7 +85,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
 
     packets_by_time: dict[float, list[str]] = {}
 
-    # One pass: include raw for reliable fallback; keep_packets=False for low RAM.
+    # Open PCAP file
     capture = pyshark.FileCapture(
         pcap_file,
         display_filter='udp || wsmp',
@@ -89,12 +95,12 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     )
     try:
         for packet in capture:
-            # Use pyshark-provided timestamp; prefer numeric seconds for stability
+            # Use pyshark-provided timestamp
             try:
                 ts = float(packet.sniff_timestamp)
             except Exception:
                 try:
-                    ts = packet.sniff_time.timestamp()  # type: ignore[attr-defined]
+                    ts = packet.sniff_time.timestamp()
                 except Exception:
                     # If no timestamp, skip this packet
                     continue
@@ -176,101 +182,21 @@ def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[floa
         
         if gaps_ms:
             avg_ipg = statistics.mean(gaps_ms)
-            # Use quantiles for percentiles
             try:
-                p95_ipg = statistics.quantiles(gaps_ms, n=20)[18]  # 95th percentile (19/20)
-                p99_ipg = statistics.quantiles(gaps_ms, n=100)[98]  # 99th percentile (99/100)
+                p95_ipg = statistics.quantiles(gaps_ms, n=20)[18]  # 95th percentile
+                p99_ipg = statistics.quantiles(gaps_ms, n=100)[98]  # 99th percentile
             except statistics.StatisticsError:
                 # Fallback for small datasets
                 sorted_gaps = sorted(gaps_ms)
                 p95_ipg = sorted_gaps[int(len(sorted_gaps) * 0.95)]
                 p99_ipg = sorted_gaps[int(len(sorted_gaps) * 0.99)]
-            
+
             label = f'{msgId.name} ({msgId.value})' if isinstance(msgId, Enum) else str(msgId)
             output(f'{label}:', w)
             output(f'  Packets: {len(timestamps)}', w)
             output(f'  Average IPG: {avg_ipg:.2f} ms', w)
             output(f'  95th percentile: {p95_ipg:.2f} ms', w)
             output(f'  99th percentile: {p99_ipg:.2f} ms', w)
-
-def isValidMsgSize(line: str) -> bool:
-    """Checks actual message size against size specified in MessageFrame.
-
-    Parameters:
-        line (str): Full message under test
-    Returns:
-        bool: True if the message size is valid, False otherwise.
-    """
-    tempFrame = line[6:]
-    if (len(tempFrame) > 510):
-        frameSize = 8
-        encodedSize = int(line[5:8], 16) * 2
-    else: 
-        frameSize = 6
-        encodedSize = int(line[4:6], 16) * 2
-
-    newFrame = line[frameSize:]
-    if (encodedSize == len(newFrame)):
-        output("Valid message.")
-        return True
-    elif (encodedSize < len(newFrame) + 150):
-        output("Checking for certificate or digest hash.")
-        # If the message is larger than expected, it may contain a certificate or digest hash
-        if isSigned(newFrame):
-            output("Message is signed, continuing.")
-            return True
-    else:
-        output("Not a valid message, continuing.")
-    return False
-
-def isSigned(frame: str) -> bool:
-    """Checks if the message is signed by looking for a certificate or digest hash.
-
-    Parameters:
-        frame (str): The message frame under test.
-    Returns:
-        bool: Validity of signed message.
-    """
-    # Find all possible cert or digest hashes, by length
-    length = len(frame)
-    possibleCert = frame[frame.find("00030180"):]
-    possibleDigest = frame[length-(76*2)+2:]
-
-    # Extract all verified cert or digest hashes
-    if (possibleCert[0:8] == "00030180"):
-        fullCert = possibleCert[8:24]
-        if fullCert:
-            output(f"Found certificate hash: {fullCert}")
-            return True
-
-    if ((possibleDigest[0:2] == possibleDigest[18:20]) and possibleDigest[18:20] == "80"):
-        hashId = possibleDigest[2:18]
-        if hashId:
-            output(f"Found digest hash: {hashId}")
-            return True
-
-    return False
-
-def isBSMPSID(line: str) -> bool:
-    """Check to ensure a found BSM PSID (0x0020) is not actually PSM DSRCmsgID 32 (0x0020). This is done by looking for the Element ID (0x0380),
-    followed by the BSM DSRCmsgID 20 (0x0014). Specifically, looking for 0020...0380...0014, else false.
-
-    Parameters:
-        line (str): Full message under test.
-    Returns:
-        bool: Validity of BSM PSID.
-    """
-    element_id = '0380'
-    bsm_id = '0014'
-
-    idx1 = line.find(element_id)
-    # Skip if no ID or not within valid range
-    if (idx1 != -1 and idx1 < 6):
-        idx2 = line.find(bsm_id)
-        # Skip if no ID or not within valid range
-        if (idx2 != -1 and idx2 < 6):
-            return True
-    return False
 
 def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str, timestamp: float, msgId_timestamps: defaultdict) -> None:
     """
