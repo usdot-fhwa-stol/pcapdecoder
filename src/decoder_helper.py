@@ -208,9 +208,6 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         jsonString = frame.to_jer()
         output(jsonString, w)
         msgId_count[id] += 1  # increment count for successfully decoded msgId
-        if timestamp is not None and msgId_timestamps is not None:
-            msgId_timestamps[id].append(timestamp)
-        else:
-            output("Timestamp or msgId_timestamps is None, cannot record timestamp.")
+        msgId_timestamps[id].append(timestamp)
     except Exception as e:
         output(f"Error decoding invalid message: {e}")
