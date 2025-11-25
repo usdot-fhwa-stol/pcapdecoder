@@ -38,6 +38,7 @@ def output(message: str, w: TextIOWrapper | None = None, newline: bool = True, f
             try:
                 w.flush()
             except Exception:
+                # Ignore flush errors
                 pass
 
 def browse_file() -> str:
