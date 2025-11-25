@@ -117,6 +117,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
                         appended = True
                         continue
             except Exception:
+                # Ignore errors, will try below
                 pass
 
             # Else get raw packet
@@ -132,6 +133,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
         try:
             capture.close()
         except Exception:
+            # Ignore close errors
             pass
 
     output(f'Extracted {sum(len(v) for v in packets_by_time.values())} packets across {len(packets_by_time)} unique timestamps.')
