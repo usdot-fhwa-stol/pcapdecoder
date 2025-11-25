@@ -203,6 +203,18 @@ def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[floa
 def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str, timestamp: float, msgId_timestamps: defaultdict) -> None:
     """
     Decodes the given message data and writes the output to the specified file.
+
+    Parameters:
+        data (str): The hex-encoded message data to decode.
+        frame: The ASN.1 frame object used for decoding.
+        w (TextIOWrapper): The output file handle to write decoded data.
+        msgId_count (defaultdict): Dictionary tracking the count of each message ID.
+        id (str): The message ID associated with the data.
+        timestamp (float): The timestamp of the message (seconds since epoch).
+        msgId_timestamps (defaultdict): Dictionary mapping message IDs to lists of timestamps.
+
+    Returns:
+        None
     """
     try:
         frame.from_uper(unhexlify(data))
