@@ -188,8 +188,10 @@ def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[floa
             except statistics.StatisticsError:
                 # Fallback for small datasets
                 sorted_gaps = sorted(gaps_ms)
-                p95_ipg = sorted_gaps[int(len(sorted_gaps) * 0.95)]
-                p99_ipg = sorted_gaps[int(len(sorted_gaps) * 0.99)]
+                p95_idx = min(int(len(sorted_gaps) * 0.95 + 0.5) - 1, len(sorted_gaps) - 1)
+                p99_idx = min(int(len(sorted_gaps) * 0.99 + 0.5) - 1, len(sorted_gaps) - 1)
+                p95_ipg = sorted_gaps[p95_idx]
+                p99_ipg = sorted_gaps[p99_idx]
 
             label = f'{msgId.name} ({msgId.value})' if isinstance(msgId, Enum) else str(msgId)
             output(f'{label}:', w)
