@@ -8,6 +8,7 @@ from collections import defaultdict
 import pycrate_asn1rt.asnobj
 import pycrate_core.elt as _core_elt
 import pycrate_asn1rt.codecs as _asn_codecs
+import json
 
 # Ensure JER JSON preserves insertion order (disable alphabetical sorting)
 # i.e., pycrate defaults to JSONEncoder(sort_keys=True). Override it here.
@@ -65,7 +66,7 @@ def formatFileName(file: str) -> str:
         str: The formatted file name.
     """
     file = os.path.basename(file)
-    fileName = 'decoded_' + file.replace('.pcap', '.txt')
+    fileName = 'decoded_' + file.replace('.pcap', '.log')
     return fileName
 
 def extract_packets(pcap_file: str) -> dict[float, list[str]]:
@@ -221,9 +222,16 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
     """
     try:
         frame.from_uper(unhexlify(data))
-        output(data, w)
+        output_string = str(round(timestamp * 1000)) # Convert to milliseconds and round to int
+        output_string = output_string + " : "
+        # output(data, w)
         jsonString = frame.to_jer()
-        output(jsonString, w)
+        # Remove newlines and tabs for compactness
+        jsonOjbject = json.loads(jsonString)
+        compactJsonString = json.dumps(jsonOjbject, separators=(',', ':'))
+        output_string = output_string  + compactJsonString
+
+        output(output_string, w)
         msgId_count[id] += 1  # increment count for successfully decoded msgId
         msgId_timestamps[id].append(timestamp)
     except Exception as e:
