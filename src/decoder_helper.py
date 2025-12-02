@@ -221,16 +221,17 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         None
     """
     try:
+        # Convert UPER data to pycrate message frame
         frame.from_uper(unhexlify(data))
+        # Generate output string in format <timestamp epoch ms> : <compact json decoded payload>
         output_string = str(round(timestamp * 1000)) # Convert to milliseconds and round to int
         output_string = output_string + " : "
-        # output(data, w)
         jsonString = frame.to_jer()
         # Remove newlines and tabs for compactness
         jsonOjbject = json.loads(jsonString)
         compactJsonString = json.dumps(jsonOjbject, separators=(',', ':'))
         output_string = output_string  + compactJsonString
-
+        # Write output string to file
         output(output_string, w)
         msgId_count[id] += 1  # increment count for successfully decoded msgId
         msgId_timestamps[id].append(timestamp)
