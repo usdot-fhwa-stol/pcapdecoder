@@ -66,8 +66,8 @@ def formatFileName(file: str) -> str:
         str: The formatted file name.
     """
     file = os.path.basename(file)
-    fileName = 'decoded_' + file.replace('.pcap', '.log')
-    return fileName
+    filename = 'decoded_' + file.replace('.pcap', '.log')
+    return filename
 
 def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     """Extract hex payloads from a PCAP with their timestamps.
@@ -226,12 +226,12 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         # Generate output string in format <timestamp epoch ms> : <compact json decoded payload>
         output_string = str(round(timestamp * 1000)) # Convert to milliseconds and round to int
         output_string = output_string + " : "
-        jsonString = frame.to_jer()
+        json_string = frame.to_jer()
         # Remove newlines and tabs for compactness
-        jsonOjbject = json.loads(jsonString)
-        compactJsonString = json.dumps(jsonOjbject, separators=(',', ':'))
-        output_string = output_string  + compactJsonString
-        # Write output string to file
+        json_object = json.loads(json_string)
+        compact_json_string = json.dumps(json_object, separators=(',', ':'))
+        output_string = output_string  + compact_json_string
+
         output(output_string, w)
         msgId_count[id] += 1  # increment count for successfully decoded msgId
         msgId_timestamps[id].append(timestamp)
