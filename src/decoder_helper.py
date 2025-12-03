@@ -8,6 +8,7 @@ from collections import defaultdict
 import pycrate_asn1rt.asnobj
 import pycrate_core.elt as _core_elt
 import pycrate_asn1rt.codecs as _asn_codecs
+import json
 
 # Ensure JER JSON preserves insertion order (disable alphabetical sorting)
 # i.e., pycrate defaults to JSONEncoder(sort_keys=True). Override it here.
@@ -65,8 +66,8 @@ def formatFileName(file: str) -> str:
         str: The formatted file name.
     """
     file = os.path.basename(file)
-    fileName = 'decoded_' + file.replace('.pcap', '.txt')
-    return fileName
+    filename = 'decoded_' + file.replace('.pcap', '.log')
+    return filename
 
 def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     """Extract hex payloads from a PCAP with their timestamps.
@@ -220,10 +221,18 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         None
     """
     try:
+        # Convert UPER data to pycrate message frame
         frame.from_uper(unhexlify(data))
-        output(data, w)
-        jsonString = frame.to_jer()
-        output(jsonString, w)
+        # Generate output string in format <timestamp epoch ms> : <compact json decoded payload>
+        output_string = str(round(timestamp * 1000)) # Convert to milliseconds and round to int
+        output_string = output_string + " : "
+        json_string = frame.to_jer()
+        # Remove newlines and tabs for compactness
+        json_object = json.loads(json_string)
+        compact_json_string = json.dumps(json_object, separators=(',', ':'))
+        output_string = output_string  + compact_json_string
+
+        output(output_string, w)
         msgId_count[id] += 1  # increment count for successfully decoded msgId
         msgId_timestamps[id].append(timestamp)
     except Exception as e:

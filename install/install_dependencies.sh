@@ -16,11 +16,12 @@ python_packages="pycrate \
 
 # Install dependencies, packages
 sudo apt-get install -y $dependencies
-pip3 install $python_packages
+python3 -m pip install -r requirements.txt
 
 # Install j2735_202409 package
 git clone https://github.com/jwillmartin/j2735_202409.git
 cd j2735_202409
-pip3 install dist/j2735_202409-0.1.0-py3-none-any.whl
+python3 -m pip install dist/j2735_202409-0.1.0-py3-none-any.whl
 cd ..
 rm -rf j2735_202409
+
