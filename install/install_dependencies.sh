@@ -1,7 +1,7 @@
 #!/bin/sh
 
 set -e
-sudo apt-get update 
+sudo apt update 
 
 # Dependencies
 dependencies="python3 \
@@ -15,7 +15,7 @@ python_packages="pycrate \
     pyshark"
 
 # Install dependencies, packages
-sudo apt-get install -y $dependencies
+sudo DEBIAN_FRONTEND=noninteractive apt install -y $dependencies
 python3 -m pip install -r requirements.txt
 
 # Install j2735_202409 package

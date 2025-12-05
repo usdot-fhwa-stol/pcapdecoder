@@ -30,7 +30,6 @@ def output(message: str, w: TextIOWrapper | None = None, newline: bool = True, f
         newline (bool): Append a newline to file output if True.
         flush (bool): Flush file handle after write if True.
     """
-    print(message)
     if w:
         w.write(message)
         if newline:
