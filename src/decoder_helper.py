@@ -1,4 +1,5 @@
 import os, pyshark
+import contextlib, io
 from binascii import unhexlify
 from io import TextIOWrapper
 from tkinter import Tk, filedialog
@@ -221,7 +222,9 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
     """
     try:
         # Convert UPER data to pycrate message frame
-        frame.from_uper(unhexlify(data))
+        # Suppress any noisy stdout/stderr emitted during decoding
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            frame.from_uper(unhexlify(data))
         # Generate output string in format <timestamp epoch ms> : <compact json decoded payload>
         output_string = str(round(timestamp * 1000)) # Convert to milliseconds and round to int
         output_string = output_string + " : "
