@@ -70,11 +70,11 @@ def main():
                     decoder_helper.decode(buf, frame, w, msgId_count, msg_id.value, timestamp, msgId_timestamps)
                     break
 
-    # Write the decoded message IDs and their counts to the output file
-    decoder_helper.writeIds(w, msgId_count)
+    # Write the decoded message IDs and their counts to terminal
+    decoder_helper.writeIds(sys.stdout, msgId_count)
     
-    # Calculate and write IPG statistics
-    decoder_helper.writeIpgStats(w, msgId_timestamps)
+    # # Calculate and write IPG statistics to terminal
+    decoder_helper.writeIpgStats(sys.stdout, msgId_timestamps)
     w.close()
 
     print('\nDecoding Complete. Check', decodedFile, '\n')
