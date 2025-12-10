@@ -9,6 +9,11 @@ import pycrate_asn1rt.asnobj
 import pycrate_core.elt as _core_elt
 import pycrate_asn1rt.codecs as _asn_codecs
 
+from pycrate_asn1rt.asnobj_ext import OPEN
+from pycrate_asn1rt.asnobj import ASN1Obj
+from pycrate_core.base import str_types, bytes_types
+from binascii import hexlify
+
 # Ensure JER JSON preserves insertion order (disable alphabetical sorting)
 # i.e., pycrate defaults to JSONEncoder(sort_keys=True). Override it here.
 try:
@@ -19,6 +24,28 @@ try:
     pycrate_asn1rt.asnobj.JsonEnc = _core_elt.JsonEnc
 except Exception:
     pass
+
+# Fix for pycrate OPEN type JER encoding: preserve type wrapper in discriminated unions
+# Without this patch, OPEN types lose their type discriminator in JSON output
+def _fix_open_to_jval(self):
+    """Preserves type wrapper in JER encoding."""
+    if isinstance(self._val[0], ASN1Obj):
+        Obj = self._val[0]
+    else:
+        if isinstance(self._val[0], str_types) and self._val[0][:5] == '_unk_':
+            if isinstance(self._val[1], bytes_types):
+                return hexlify(self._val[1]).decode()
+            else:
+                return self._val[1]
+        Obj = self._get_val_obj(self._val[0])
+    # Recursively get inner JER value
+    inner_jval = Obj._to_jval()
+    type_name = self._val[0]
+    # Return with type wrapper
+    return {type_name: inner_jval}
+
+OPEN._to_jval = _fix_open_to_jval
+
 
 def output(message: str, w: TextIOWrapper | None = None, newline: bool = True, flush: bool = False) -> None:
     """Unified console and optional file output.
