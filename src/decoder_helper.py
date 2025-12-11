@@ -32,6 +32,7 @@ def _fix_open_to_jval(self):
     """Preserves type wrapper in JER encoding."""
     if isinstance(self._val[0], ASN1Obj):
         Obj = self._val[0]
+        type_name = '%s.%s' % (Obj._mod, Obj._name) # Get type name
     else:
         if isinstance(self._val[0], str_types) and self._val[0][:5] == '_unk_':
             if isinstance(self._val[1], bytes_types):
@@ -39,11 +40,10 @@ def _fix_open_to_jval(self):
             else:
                 return self._val[1]
         Obj = self._get_val_obj(self._val[0])
-    # Recursively get inner JER value
-    inner_jval = Obj._to_jval()
-    type_name = self._val[0]
+        type_name = self._val[0] # Get type name
+    Obj._val = self._val[1]
     # Return with type wrapper
-    return {type_name: inner_jval}
+    return {type_name: Obj._to_jval()}
 
 OPEN._to_jval = _fix_open_to_jval
 
