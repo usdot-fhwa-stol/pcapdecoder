@@ -14,8 +14,10 @@ jobs:
           
       - name: Install dependencies
         run:  |
-          ./install/install_dependencies.sh
+          cd install
+          ./install_dependencies.sh
           pip install pyinstaller
+          cd ..
         
       - name: Build Binary
         run: pyinstaller --onefile src/pcapdecoder.py --name "pcap_decoder"
