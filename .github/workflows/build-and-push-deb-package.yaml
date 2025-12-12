@@ -48,10 +48,10 @@ jobs:
           path: |
             build*/_packages/*.deb
             ./build*/_packages/*.deb
- deb-s3-upload:
+  deb-s3-upload:
     runs-on: ubuntu-latest
     needs:
-      - cpp-module-build
+      -  build-deb
     container:
       image: ghcr.io/usdot-fhwa-stol/actions-deb-s3:main
     steps:
