@@ -60,6 +60,6 @@ jobs:
         uses: usdot-fhwa-stol/actions/deb-s3-upload@main
         with:
           artifact-name: deb-packages-x64-jammy
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-access-key-id: ${{ secrets.APT_REPO_AWS_ACCESS_KEY_ID}}
+          aws-secret-access-key: ${{ secrets.APT_REPO_AWS_SECRET_ACCESS_KEY }}
           component-name: jammy
