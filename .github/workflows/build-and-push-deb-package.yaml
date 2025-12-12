@@ -29,19 +29,36 @@ jobs:
           ls dist/
           cp dist/pcap_decoder deb-package/usr/local/bin/
           
-          echo "Package: my-app
+          echo "Package: pcap_decoder
           Version: 1.0.0
-          Section: base
+          Section: devel
           Priority: optional
+          Homepage: https://github.com/usdot-fhwa-stol/pcapdecoder
           Architecture: amd64
-          Maintainer: You <you@example.com>
-          Description: Standalone python app" > deb-package/DEBIAN/control
+          Maintainer: FHWA Saxton Laboratory <CARMAsupport@dot.gov>
+          Description: RSU Tool for Decoding PCAP Files" > deb-package/DEBIAN/control
           
       - name: Build Debian Package
-        run: dpkg-deb --build deb-package my-app.deb
+        run: dpkg-deb --build deb-package pcap_decoder.deb
         
-      - name: Upload Artifact
+      - name: Upload deb artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: debian-package
-          path: my-app.deb
+          name: deb-packages-x64-jammy
+          path: |
+            build*/_packages/*.deb
+            ./build*/_packages/*.deb
+ deb-s3-upload:
+    runs-on: ubuntu-latest
+    needs:
+      - cpp-module-build
+    container:
+      image: ghcr.io/usdot-fhwa-stol/actions-deb-s3:main
+    steps:
+      - name: Publish deb artifacts
+        uses: usdot-fhwa-stol/actions/deb-s3-upload@main
+        with:
+          artifact-name: deb-packages-x64-jammy
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          component-name: jammy
