@@ -20,16 +20,16 @@ jobs:
           cd ..
         
       - name: Build Binary
-        run: pyinstaller --onefile src/pcapDecode.py --name "pcap_decoder"
+        run: pyinstaller --onefile src/pcapDecode.py --name "pcapdecoder"
       - name: Prepare .deb Structure
         run: |
           mkdir -p deb-package/usr/local/bin
           mkdir -p deb-package/DEBIAN
           ls
           ls dist/
-          cp dist/pcap_decoder deb-package/usr/local/bin/
+          cp dist/pcapdecoder deb-package/usr/local/bin/
           
-          echo "Package: pcap_decoder
+          echo "Package: pcapdecoder
           Version: 1.0.0
           Section: devel
           Priority: optional
@@ -40,7 +40,7 @@ jobs:
           
       - name: Build Debian Package
         run: |
-          dpkg-deb --build deb-package pcap-decoder.deb
+          dpkg-deb --build deb-package pcapdecoder.deb
           ls -l
         
       - name: Upload deb artifacts
@@ -48,7 +48,7 @@ jobs:
         with:
           name: deb-packages-x64-jammy
           path: |
-            pcap-decoder.deb
+            pcapdecoder.deb
   deb-s3-upload:
     runs-on: ubuntu-latest
     needs:
