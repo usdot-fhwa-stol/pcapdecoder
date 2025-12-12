@@ -20,7 +20,7 @@ jobs:
           cd ..
         
       - name: Build Binary
-        run: pyinstaller --onefile src/pcapdecoder.py --name "pcap_decoder"
+        run: pyinstaller --onefile src/pcapDecode.py --name "pcap_decoder"
       - name: Prepare .deb Structure
         run: |
           mkdir -p deb-package/usr/local/bin
