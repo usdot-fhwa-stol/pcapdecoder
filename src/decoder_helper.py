@@ -105,11 +105,23 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
         dict[float, list[str]]: Mapping of packet timestamps to lists of hex payloads.
     """
     output(f'Extracting packets from {pcap_file}...')
-    def _clean_hex(s: str | None) -> str | None:
+
+    def _clean_hex(s: str | bytes | None) -> str | None:
         if not s:
             return None
-        # Pyshark may return colon-delimited bytes; strip separators and lower.
-        return s.replace(":", "").replace(" ", "").strip().lower()
+        if isinstance(s, bytes):
+            s = s.decode('ascii', errors='ignore')
+        cleaned = s.replace(":", "").replace(" ", "").strip().lower()
+        # Try to decode as ASCII
+        try:
+            decoded = bytes.fromhex(cleaned).decode('ascii')
+            # Extract Payload field
+            idx = decoded.find('Payload=')
+            if idx != -1:
+                payload = decoded[idx+8:-1]
+                return payload.strip().lower()
+        except (ValueError, UnicodeDecodeError):
+            return cleaned
 
     packets_by_time: dict[float, list[str]] = {}
 
