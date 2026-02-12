@@ -109,6 +109,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     def _clean_hex(s: str | None) -> str | None:
         if not s:
             return None
+        # Pyshark may return colon-delimited bytes; strip separators and lower.
         cleaned = s.replace(":", "").replace(" ", "").strip().lower()
         # Try to decode as ASCII
         try:
