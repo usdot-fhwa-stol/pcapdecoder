@@ -127,7 +127,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     # Open PCAP file
     capture = pyshark.FileCapture(
         pcap_file,
-        display_filter='udp || wsmp',
+        display_filter='udp || wsmp || mqtt',
         use_json=True,
         include_raw=True,
         keep_packets=False,

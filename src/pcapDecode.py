@@ -50,10 +50,10 @@ def main():
         payload_list = packets[timestamp]
         for line in payload_list:
             lower_line = line.lower()
-            half_limit = len(lower_line) // 2
+            set_limit = (len(lower_line) * 2) // 3  # Limit search to first 2/3 of the payload
             for msg_id in msgIds:
                 pos = 0
-                search_limit = half_limit
+                search_limit = set_limit
                 while pos <= search_limit:
                     idx = lower_line.find(msg_id.value, pos, search_limit + 1)
                     if idx == -1:
