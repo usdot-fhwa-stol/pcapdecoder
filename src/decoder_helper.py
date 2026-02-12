@@ -117,7 +117,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
             # Extract Payload field
             idx = decoded.find('Payload=')
             if idx != -1:
-                payload = decoded[idx+8:-1]
+                payload = decoded[idx+8:]
                 return payload.strip().lower()
         except (ValueError, UnicodeDecodeError):
             return cleaned
