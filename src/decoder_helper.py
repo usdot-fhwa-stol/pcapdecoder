@@ -106,11 +106,9 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
     """
     output(f'Extracting packets from {pcap_file}...')
 
-    def _clean_hex(s: str | bytes | None) -> str | None:
+    def _clean_hex(s: str | None) -> str | None:
         if not s:
             return None
-        if isinstance(s, bytes):
-            s = s.decode('ascii', errors='ignore')
         cleaned = s.replace(":", "").replace(" ", "").strip().lower()
         # Try to decode as ASCII
         try:
