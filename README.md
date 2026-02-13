@@ -6,6 +6,7 @@ This script decodes SAE J2735 messages from UDP, WSMP, or MQTT packets in PCAP f
 
 ## Prerequisites
 
+- python >=3.8
 - tkinter
 - pyshark
 
