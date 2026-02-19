@@ -1,11 +1,12 @@
 # PCAP Decoder for SAE J2735 Messages
 
-This script decodes PCAP files containing SAE J2735 messages. The decoded output is displayed in the terminal and saved to a file with the same name as the original PCAP file.
+This script decodes SAE J2735 messages from UDP, WSMP, or MQTT packets in PCAP files. The decoded output is saved to a file with the same name as the original PCAP file and a decoding report is printed to the terminal.
 
 **Note:** The script currently outputs data as a JSON. Support for XML is possible if requested.
 
 ## Prerequisites
 
+- python >=3.8
 - tkinter
 - pyshark
 

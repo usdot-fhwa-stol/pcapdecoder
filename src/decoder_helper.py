@@ -117,17 +117,26 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
             # Extract Payload field
             idx = decoded.find('Payload=')
             if idx != -1:
-                payload = decoded[idx+8:]
-                return payload.strip().lower()
+                return decoded[idx+8:].strip().lower()
         except (ValueError, UnicodeDecodeError):
-            return cleaned
+            pass
+        return cleaned
 
-    packets_by_time: dict[float, list[str]] = {}
+    def _extract_payload(packet) -> str | None:
+        """Try extracting payload in priority order: data.data > mqtt.msg > raw."""
+        if hasattr(packet, 'data') and (data := _clean_hex(getattr(packet.data, 'data', None))):
+            return data
+        if hasattr(packet, 'mqtt') and (mqtt := _clean_hex(getattr(packet.mqtt, 'msg', None))):
+            return mqtt
+        if raw := packet.get_raw_packet():
+            return raw.hex()
+        return None
 
-    # Open PCAP file
+    packets_by_time: defaultdict[float, list[str]] = defaultdict(list)
+
     capture = pyshark.FileCapture(
         pcap_file,
-        display_filter='udp || wsmp',
+        display_filter='udp || wsmp || mqtt',
         use_json=True,
         include_raw=True,
         keep_packets=False,
@@ -144,38 +153,13 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
                     # If no timestamp, skip this packet
                     continue
 
-            appended = False
-            # If available, get udp data.data field
-            try:
-                if hasattr(packet, 'data'):
-                    data_field = getattr(packet.data, 'data', None)
-                    data_field = _clean_hex(data_field)
-                    if data_field:
-                        packets_by_time.setdefault(ts, []).append(data_field)
-                        appended = True
-                        continue
-            except Exception:
-                # Ignore errors, will try below
-                pass
-
-            # Else get raw packet
-            if not appended:
-                try:
-                    raw = packet.get_raw_packet()
-                    if raw:
-                        packets_by_time.setdefault(ts, []).append(raw.hex())
-                except Exception:
-                    # As a last resort, skip this packet
-                    continue
+            if payload := _extract_payload(packet):
+                packets_by_time[ts].append(payload)
     finally:
-        try:
-            capture.close()
-        except Exception:
-            # Ignore close errors
-            pass
+        capture.close()
 
     output(f'Extracted {sum(len(v) for v in packets_by_time.values())} packets across {len(packets_by_time)} unique timestamps.')
-    return packets_by_time
+    return dict(packets_by_time)
 
 def writeIds(w: TextIOWrapper, msgId_count: defaultdict[int, int]) -> None:
     """Write the decoded message IDs and their counts to the output file.
