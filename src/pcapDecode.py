@@ -31,7 +31,7 @@ def main():
     # Setup argument parser
     parser = argparse.ArgumentParser(description="PCAP Decoder")
     parser.add_argument("--input-file", help="Path to the PCAP file")
-    parser.add_argument("--output-dir",help="Directory for the outptu log file")
+    parser.add_argument("--output-dir",help="Directory for the output log file")
     args = parser.parse_args()
 
     # File path can be given by a command line argument or chosen with a UI
