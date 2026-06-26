@@ -52,8 +52,8 @@ def main():
         decoded_dir = Path(args.output_dir)
         os.makedirs(decoded_dir, exist_ok=True)
         decodedFile = decoder_helper.formatFileName(file)
-        decodedPath = decoded_dir / decodedFile
-        print(f"Outputting to: {decodedPath}")
+        decoded_path = decoded_dir / decodedFile
+        print(f"Outputting to: {decoded_path}")
     else:
         # Make sure the decoded directory exists alongside src
         srcDir     = os.path.dirname(os.path.abspath(__file__))
@@ -62,9 +62,9 @@ def main():
 
         # Build the output path
         decodedFile = decoder_helper.formatFileName(file)
-        decodedPath     = os.path.join(decoded_dir, decodedFile)
+        decoded_path     = os.path.join(decoded_dir, decodedFile)
         
-    w = open(decodedPath, 'w')
+    w = open(decoded_path, 'w')
 
     # Extract packets from the PCAP file
     packets = decoder_helper.extract_packets(file)
