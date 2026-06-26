@@ -49,20 +49,20 @@ def main():
     # Output file path can be chosen by a command line argument. Otherwise it is stored in a default location. 
     if args.output_dir:
         # Use provided directory, but keep the specific naming pattern
-        decodedDir = Path(args.output_dir)
-        os.makedirs(decodedDir, exist_ok=True)
+        decoded_dir = Path(args.output_dir)
+        os.makedirs(decoded_dir, exist_ok=True)
         decodedFile = decoder_helper.formatFileName(file)
-        decodedPath = decodedDir / decodedFile
+        decodedPath = decoded_dir / decodedFile
         print(f"Outputting to: {decodedPath}")
     else:
         # Make sure the decoded directory exists alongside src
         srcDir     = os.path.dirname(os.path.abspath(__file__))
-        decodedDir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
-        os.makedirs(decodedDir, exist_ok=True)
+        decoded_dir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
+        os.makedirs(decoded_dir, exist_ok=True)
 
         # Build the output path
         decodedFile = decoder_helper.formatFileName(file)
-        decodedPath     = os.path.join(decodedDir, decodedFile)
+        decodedPath     = os.path.join(decoded_dir, decodedFile)
         
     w = open(decodedPath, 'w')
 
