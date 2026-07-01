@@ -1,7 +1,7 @@
 #!/bin/sh
 
+sudo apt update
 set -e
-sudo apt update 
 
 # Dependencies
 dependencies="python3 \
@@ -23,7 +23,7 @@ if python3 -c "import j2735_202409" 2>/dev/null; then
     echo "j2735_202409 is already installed, skipping."
 else
     echo "Installing j2735_202409..."
-    git clone https://github.com/jwillmartin/j2735_202409.git
+    git clone https://github.com/usdot-fhwa-stol/j2735_202409.git
     cd j2735_202409
     python3 -m pip install dist/j2735_202409-0.1.0-py3-none-any.whl
     cd ..

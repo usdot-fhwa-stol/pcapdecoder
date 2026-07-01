@@ -19,6 +19,7 @@ cd install
 
 ## Usage
 
+### Interactive 
 1. Move your PCAP file containing J2735 messages to the [logs](/logs) directory.
 2. Execute the script:
 ```
@@ -27,6 +28,15 @@ cd src
 ```
 3. Follow the on-screen prompts.
 4. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the [decoded](/decoded) directory.
+
+### Non Interactive
+1. Move your PCAP file containing J2735 messages to the [logs](/logs) directory or one of your choosing.
+2. Execute the script:
+```
+cd src
+./pcapDecode.py [-h] [--input-file INPUT_FILE] [--output-dir OUTPUT_DIR]
+```
+3. Chosen file contents will be decoded, printed to the terminal, and written to a log of the same name in the [decoded](/decoded) directory.
 
 ### Version
 

@@ -8,6 +8,9 @@ import contextlib
 import io
 from enum import Enum
 
+import argparse
+from pathlib import Path
+
 class MsgID(Enum):
     MAP  = "0012"
     SPAT = "0013"
@@ -25,20 +28,43 @@ def main():
     msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
     msgId_timestamps = defaultdict(list)  # track timestamps for IPG calculation
 
-    # Browse for the PCAP file
-    file = decoder_helper.browse_file()
+    # Setup argument parser
+    parser = argparse.ArgumentParser(description="PCAP Decoder")
+    parser.add_argument("--input-file", help="Path to the PCAP file")
+    parser.add_argument("--output-dir",help="Directory for the output log file")
+    args = parser.parse_args()
+
+    # File path can be given by a command line argument or chosen with a UI
+    if args.input_file:
+        # Batch mode: use the hardcoded path from the argument
+        file = args.input_file
+        print(f"Batch mode: Decoding {file}")
+    else:
+        # Manual mode: trigger the UI
+        file = decoder_helper.browse_file()
+
     if not file:
         raise ValueError("No file selected. Exiting.")
+    
+    # Output file path can be chosen by a command line argument. Otherwise it is stored in a default location. 
+    if args.output_dir:
+        # Use provided directory, but keep the specific naming pattern
+        decoded_dir = Path(args.output_dir)
+        os.makedirs(decoded_dir, exist_ok=True)
+        decodedFile = decoder_helper.formatFileName(file)
+        decoded_path = decoded_dir / decodedFile
+        print(f"Outputting to: {decoded_path}")
+    else:
+        # Make sure the decoded directory exists alongside src
+        srcDir     = os.path.dirname(os.path.abspath(__file__))
+        decoded_dir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
+        os.makedirs(decoded_dir, exist_ok=True)
 
-    # Make sure the decoded directory exists alongside src
-    srcDir     = os.path.dirname(os.path.abspath(__file__))
-    decodedDir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
-    os.makedirs(decodedDir, exist_ok=True)
-
-    # Build the output path
-    decodedFile = decoder_helper.formatFileName(file)
-    decodedPath     = os.path.join(decodedDir, decodedFile)
-    w = open(decodedPath, 'w')
+        # Build the output path
+        decodedFile = decoder_helper.formatFileName(file)
+        decoded_path     = os.path.join(decoded_dir, decodedFile)
+        
+    w = open(decoded_path, 'w')
 
     # Extract packets from the PCAP file
     packets = decoder_helper.extract_packets(file)
