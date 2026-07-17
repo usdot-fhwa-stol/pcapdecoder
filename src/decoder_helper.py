@@ -1,4 +1,7 @@
 import os, pyshark
+import contextlib, io
+import Ieee1609Dot2
+import Ieee1609Dot3Wsm
 from binascii import unhexlify
 from io import TextIOWrapper
 from tkinter import Tk, filedialog
@@ -83,7 +86,7 @@ def browse_file() -> str:
                                           filetypes=[("PCAP Files", "*.pcap")])
     return filename
 
-def formatFileName(file: str) -> str:
+def format_file_name(file: str) -> str:
     """Format the file name for the decoded output.
 
     Parameters:
@@ -95,14 +98,96 @@ def formatFileName(file: str) -> str:
     filename = 'decoded_' + file.replace('.pcap', '.log')
     return filename
 
+# Maximum number of leading bytes to scan for the start of the WSMP-N-Header.
+# Captures wrap the WSM in varying outer framing, so the WSMP
+# ShortMsgNpdu does not always begin at offset 0 of the captured payload.
+_WSMP_SCAN_BYTES = 64
+
+# First byte of a WSMP-N-Header for the messages we decode: null subtype, no
+# N-extensions, version 3 -> UPER encodes to 0x03. Gating the offset scan on
+# this byte avoids an expensive ShortMsgNpdu UPER decode attempt at every
+# offset while keeping the strict validation below.
+_WSMP_FIRST_BYTE = 0x03
+
+_ShortMsgNpdu = Ieee1609Dot3Wsm.Ieee1609Dot3Wsm.ShortMsgNpdu
+_Ieee1609Dot2Data = Ieee1609Dot2.Ieee1609Dot2.Ieee1609Dot2Data
+
+
+def _wsm_from_dot2(dot2data: dict) -> bytes | None:
+    """Pull the WSM (J2735 MessageFrame) bytes out of a decoded Ieee1609Dot2Data.
+
+    Handles both content choices seen on the wire:
+      - unsecuredData: the WSM is the Opaque payload directly.
+      - signedData: the WSM is the unsecured payload nested in tbsData.
+    """
+    choice, value = dot2data['content']
+    if choice == 'unsecuredData':
+        return value
+    if choice == 'signedData':
+        inner = value['tbsData']['payload']['data']  # nested Ieee1609Dot2Data
+        inner_choice, inner_value = inner['content']
+        if inner_choice == 'unsecuredData':
+            return inner_value
+    return None
+
+
+def get_wsm(data: str) -> str | None:
+    """Extract the WSM (J2735 MessageFrame) hex from a captured UDP payload.
+
+    The payload is a WSMP frame (IEEE 1609.3 ShortMsgNpdu) carrying
+    Ieee1609Dot2Data, which carries the WSM. Because the outer framing
+    varies by capture source, the first bytes are scanned for a *valid*
+    WSMP-N-Header (null subtype, version 3, bcMode transport) whose body
+    OER-decodes to a known Ieee1609Dot2Data content type.
+
+    Parameters:
+        data (str): Hex-encoded UDP payload.
+    Returns:
+        str | None: The WSM hex, or None if no WSM could be extracted.
+    """
+    raw = unhexlify(data.strip())
+    # pycrate emits decode warnings to stdout/stderr on the many failed probe
+    # attempts; silence them so the scan stays quiet.
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        for offset in range(min(_WSMP_SCAN_BYTES, len(raw))):
+            if raw[offset] != _WSMP_FIRST_BYTE:
+                continue
+            try:
+                _ShortMsgNpdu.reset_val()
+                _ShortMsgNpdu.from_uper(raw[offset:])
+                npdu = _ShortMsgNpdu()
+            except Exception:
+                continue
+            # Validate this is a well-formed WSMP-N-Header, not a chance parse.
+            subtype, subtype_val = npdu['subtype']
+            if subtype != 'nullNetworking' or subtype_val.get('version') != 3:
+                continue
+            if npdu['transport'][0] != 'bcMode' or not npdu['body']:
+                continue
+            try:
+                _Ieee1609Dot2Data.reset_val()
+                _Ieee1609Dot2Data.from_oer(npdu['body'])
+                dot2data = _Ieee1609Dot2Data()
+            except Exception:
+                continue
+            if dot2data['content'][0] not in ('unsecuredData', 'signedData'):
+                continue
+            wsm = _wsm_from_dot2(dot2data)
+            if wsm:
+                return wsm.hex()
+    return None
+
 def extract_packets(pcap_file: str) -> dict[float, list[str]]:
-    """Extract hex payloads from a PCAP with their timestamps.
+    """Extract WSM (J2735 MessageFrame) hex payloads from a PCAP with timestamps.
+
+    Each UDP payload is unwrapped through its WSMP (1609.3) and Ieee1609Dot2Data
+    layers down to the WSM via get_wsm. Non-WSMP packets are skipped.
 
     Parameters:
         pcap_file (str): The path to the PCAP file.
 
     Returns:
-        dict[float, list[str]]: Mapping of packet timestamps to lists of hex payloads.
+        dict[float, list[str]]: Mapping of packet timestamps to lists of WSM hex.
     """
     output(f'Extracting packets from {pcap_file}...')
 
@@ -118,7 +203,7 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
             idx = decoded.find('Payload=')
             if idx != -1:
                 return decoded[idx+8:].strip().lower()
-        except (ValueError, UnicodeDecodeError):
+        except (ValueError):
             pass
         return cleaned
 
@@ -153,36 +238,38 @@ def extract_packets(pcap_file: str) -> dict[float, list[str]]:
                     # If no timestamp, skip this packet
                     continue
 
-            if payload := _extract_payload(packet):
-                packets_by_time[ts].append(payload)
+            # Extract the raw UDP payload, then unwrap WSMP + 1609.2 to the WSM.
+            # Packets that are not WSMP-framed WSMs yield None and are dropped.
+            if (payload := _extract_payload(packet)) and (wsm := get_wsm(payload)):
+                packets_by_time[ts].append(wsm)
     finally:
         capture.close()
 
-    output(f'Extracted {sum(len(v) for v in packets_by_time.values())} packets across {len(packets_by_time)} unique timestamps.')
+    output(f'Extracted {sum(len(v) for v in packets_by_time.values())} WSMs across {len(packets_by_time)} unique timestamps.')
     return dict(packets_by_time)
 
-def writeIds(w: TextIOWrapper, msgId_count: defaultdict[int, int]) -> None:
+def write_ids(w: TextIOWrapper, msg_id_count: defaultdict[int, int]) -> None:
     """Write the decoded message IDs and their counts to the output file.
 
     Parameters:
         w (TextIOWrapper): The output file handle.
-        msgId_count (defaultdict[int, int]): The message ID counts.
+        msg_id_count (defaultdict[int, int]): The message ID counts.
     """
     from enum import Enum
     output('\nDecoded Message ID Counts:', w)
-    for msgId, count in msgId_count.items():
+    for msg_id, count in msg_id_count.items():
         # Format Enum members as "NAME (value)", otherwise just the value
-        if isinstance(msgId, Enum):
-            output(f'{msgId.name} ({msgId.value}): {count}', w)
+        if isinstance(msg_id, Enum):
+            output(f'{msg_id.name} ({msg_id.value}): {count}', w)
         else:
-            output(f'{msgId}: {count}', w)
+            output(f'{msg_id}: {count}', w)
 
-def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[float]]) -> None:
+def writeIpgStats(w: TextIOWrapper, msg_id_timestamps: defaultdict[str, list[float]]) -> None:
     """Calculate and write inter-packet gap statistics for each message ID.
 
     Parameters:
         w (TextIOWrapper): The output file handle.
-        msgId_timestamps (defaultdict[str, list[float]]): Timestamps for each msgId.
+        msg_id_timestamps (defaultdict[str, list[float]]): Timestamps for each msg_id.
     """
     import statistics
     
@@ -191,13 +278,13 @@ def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[floa
     output('-' * 60, w)
     
     # Sort by Enum name if available, otherwise by string representation
-    sorted_keys = sorted(msgId_timestamps.keys(), 
+    sorted_keys = sorted(msg_id_timestamps.keys(), 
                         key=lambda x: x.name if isinstance(x, Enum) else str(x))
     
-    for msgId in sorted_keys:
-        timestamps = sorted(msgId_timestamps[msgId])
+    for msg_id in sorted_keys:
+        timestamps = sorted(msg_id_timestamps[msg_id])
         if len(timestamps) < 2:
-            label = f'{msgId.name} ({msgId.value})' if isinstance(msgId, Enum) else str(msgId)
+            label = f'{msg_id.name} ({msg_id.value})' if isinstance(msg_id, Enum) else str(msg_id)
             output(f'{label}: Insufficient data (only {len(timestamps)} packet)', w)
             continue
         
@@ -218,14 +305,14 @@ def writeIpgStats(w: TextIOWrapper, msgId_timestamps: defaultdict[str, list[floa
                 p95_ipg = sorted_gaps[p95_idx]
                 p99_ipg = sorted_gaps[p99_idx]
 
-            label = f'{msgId.name} ({msgId.value})' if isinstance(msgId, Enum) else str(msgId)
+            label = f'{msg_id.name} ({msg_id.value})' if isinstance(msg_id, Enum) else str(msg_id)
             output(f'{label}:', w)
             output(f'  Packets: {len(timestamps)}', w)
             output(f'  Average IPG: {avg_ipg:.2f} ms', w)
             output(f'  95th percentile: {p95_ipg:.2f} ms', w)
             output(f'  99th percentile: {p99_ipg:.2f} ms', w)
 
-def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str, timestamp: float, msgId_timestamps: defaultdict) -> None:
+def decode(data: str, frame, w: TextIOWrapper, msg_id_count: defaultdict, id: str, timestamp: float, msg_id_timestamps: defaultdict) -> None:
     """
     Decodes the given message data and writes the output to the specified file.
 
@@ -233,7 +320,7 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         data (str): The hex-encoded message data to decode.
         frame: The ASN.1 frame object used for decoding.
         w (TextIOWrapper): The output file handle to write decoded data.
-        msgId_count (defaultdict): Dictionary tracking the count of each message ID.
+        msg_id_count (defaultdict): Dictionary tracking the count of each message ID.
         id (str): The message ID associated with the data.
         timestamp (float): The timestamp of the message (seconds since epoch).
         msgId_timestamps (defaultdict): Dictionary mapping message IDs to lists of timestamps.
@@ -254,7 +341,7 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         output_string = output_string  + compact_json_string
 
         output(output_string, w)
-        msgId_count[id] += 1  # increment count for successfully decoded msgId
-        msgId_timestamps[id].append(timestamp)
+        msg_id_count[id] += 1  # increment count for successfully decoded msgId
+        msg_id_timestamps[id].append(timestamp)
     except Exception as e:
         output(f"Error decoding invalid message: {e}")

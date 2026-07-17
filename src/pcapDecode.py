@@ -9,6 +9,8 @@ import io
 from enum import Enum
 
 class MsgID(Enum):
+    # DSRCmsgID values, as the leading two bytes (UPER) of the MessageFrame.
+    # Comment out an entry to exclude that message type from the decoded output.
     MAP  = "0012"
     SPAT = "0013"
     BSM  = "0014"
@@ -21,9 +23,9 @@ class MsgID(Enum):
 def main():
     # Initialize the message frame and ID tracking
     frame = j2735_202409.MessageFrame.MessageFrame
-    msgIds = list(MsgID)  # All message ID types from Enum
-    msgId_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
-    msgId_timestamps = defaultdict(list)  # track timestamps for IPG calculation
+    msg_ids = {m.value: m for m in MsgID}  # DSRCmsgID hex -> MsgID member
+    msg_id_count = defaultdict(int)  # dictionary to track decoded msgId and their counts
+    msg_id_timestamps = defaultdict(list)  # track timestamps for IPG calculation
 
     # Browse for the PCAP file
     file = decoder_helper.browse_file()
@@ -31,14 +33,14 @@ def main():
         raise ValueError("No file selected. Exiting.")
 
     # Make sure the decoded directory exists alongside src
-    srcDir     = os.path.dirname(os.path.abspath(__file__))
-    decodedDir = os.path.abspath(os.path.join(srcDir, '..', 'decoded'))
-    os.makedirs(decodedDir, exist_ok=True)
+    src_dir     = os.path.dirname(os.path.abspath(__file__))
+    decoded_dir = os.path.abspath(os.path.join(src_dir, '..', 'decoded'))
+    os.makedirs(decoded_dir, exist_ok=True)
 
     # Build the output path
-    decodedFile = decoder_helper.formatFileName(file)
-    decodedPath     = os.path.join(decodedDir, decodedFile)
-    w = open(decodedPath, 'w')
+    decoded_file = decoder_helper.format_file_name(file)
+    decoded_path     = os.path.join(decoded_dir, decoded_file)
+    w = open(decoded_path, 'w')
 
     # Extract packets from the PCAP file
     packets = decoder_helper.extract_packets(file)
@@ -47,36 +49,28 @@ def main():
 
     # Iterate per timestamp preserving chronological order
     for timestamp in sorted(packets.keys()):
-        payload_list = packets[timestamp]
-        for line in payload_list:
-            lower_line = line.lower()
-            search_limit = (len(lower_line) * 2) // 3  # Limit search to first 2/3 of the payload
-            for msg_id in msgIds:
-                pos = 0
-                while pos <= search_limit:
-                    idx = lower_line.find(msg_id.value, pos, search_limit + 1)
-                    if idx == -1:
-                        break
-                    buf = lower_line[idx:].strip('\n')
-                    try:
-                        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-                            frame.from_uper(unhexlify(buf))
-                    except Exception:
-                        # Advance past this occurrence to look for another instance.
-                        pos = idx + len(msg_id.value)
-                        continue
-                    # Successful decode; record and stop scanning this msg_id for current line.
-                    decoder_helper.decode(buf, frame, w, msgId_count, msg_id.value, timestamp, msgId_timestamps)
-                    break
+        for wsm_hex in packets[timestamp]:
+            # The DSRCmsgID is the leading INTEGER of the MessageFrame; its UPER
+            # encoding is the first two bytes of the WSM. Skip message types not
+            # listed in MsgID (e.g. non-J2735 payloads under other PSIDs).
+            msg_id = msg_ids.get(wsm_hex[:4].lower())
+            if msg_id is None:
+                continue
+            try:
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                    frame.from_uper(unhexlify(wsm_hex))
+            except Exception:
+                continue  # Not a decodable MessageFrame; skip.
+            decoder_helper.decode(wsm_hex, frame, w, msg_id_count, msg_id, timestamp, msg_id_timestamps)
 
     # Write the decoded message IDs and their counts to terminal
-    decoder_helper.writeIds(sys.stdout, msgId_count)
+    decoder_helper.write_ids(sys.stdout, msg_id_count)
     
     # # Calculate and write IPG statistics to terminal
-    decoder_helper.writeIpgStats(sys.stdout, msgId_timestamps)
+    decoder_helper.writeIpgStats(sys.stdout, msg_id_timestamps)
     w.close()
 
-    print('\nDecoding Complete. Check', decodedFile, '\n')
+    print('\nDecoding Complete. Check', decoded_file, '\n')
     sys.exit(0)
 
 if __name__=="__main__":
