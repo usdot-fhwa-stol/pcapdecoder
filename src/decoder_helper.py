@@ -3,6 +3,7 @@ from binascii import unhexlify
 from io import TextIOWrapper
 from tkinter import Tk, filedialog
 from collections import defaultdict
+from pycrate_asn1rt.utils import Charpy
 
 # Monkey-patch imports to control JSON encoding behavior used by to_jer()
 import pycrate_asn1rt.asnobj
@@ -14,6 +15,10 @@ from pycrate_asn1rt.asnobj_ext import OPEN
 from pycrate_asn1rt.asnobj import ASN1Obj
 from pycrate_core.base import str_types, bytes_types
 from binascii import hexlify
+
+from Ieee1609dot3 import Ieee1609Dot3Wsm, Ieee1609Dot2
+from j2735_202409 import MessageFrame
+
 
 # Ensure JER JSON preserves insertion order (disable alphabetical sorting)
 # i.e., pycrate defaults to JSONEncoder(sort_keys=True). Override it here.
@@ -258,3 +263,41 @@ def decode(data: str, frame, w: TextIOWrapper, msgId_count: defaultdict, id: str
         msgId_timestamps[id].append(timestamp)
     except Exception as e:
         output(f"Error decoding invalid message: {e}")
+
+
+def decode_wsmp(raw, max_prefix=4):
+    for off in range(max_prefix + 1):
+        try:
+            char = Charpy(raw[off:])
+            Ieee1609Dot3Wsm.ShortMsgNpdu.from_uper_ws(char)
+            if char._cur == len(raw[off:]) * 8:      # consumed everything -> right offset
+                return off, json.loads(Ieee1609Dot3Wsm.ShortMsgNpdu.to_jer())
+        except Exception:
+            continue
+    raise ValueError('no offset yields a complete ShortMsgNpdu decode')
+
+
+def decoded_j2735_from_secured(packet):
+    try:
+        off, wsmp = decode_wsmp(unhexlify(packet))
+    except Exception as e:
+        print("Error decoding wsmp: ", str(e))
+        return None, None, None
+        
+    try:
+        Ieee1609Dot2.Ieee1609Dot2Data.from_coer(unhexlify(wsmp['body']))   # note: COER
+    except Exception as e:
+        print("Error decoding Ieee1609Dot2: ", str(e))
+        return wsmp, None, None
+    
+    ieee1609dot2_data = json.loads(Ieee1609Dot2.Ieee1609Dot2Data.to_jer())
+    try:
+        MessageFrame.MessageFrame.from_uper(unhexlify(ieee1609dot2_data["content"]["signedData"]["tbsData"]["payload"]["data"]["content"]["unsecuredData"]))
+    except Exception as e:
+        print("Error decoding j2735 data:", str(e))
+        return wsmp, ieee1609dot2_data, None
+
+    j2735_data = json.loads(MessageFrame.MessageFrame.to_jer())
+    return wsmp, ieee1609dot2_data, j2735_data
+
+
