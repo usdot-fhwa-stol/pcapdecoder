@@ -5,6 +5,7 @@ import decoder_helper
 from collections import defaultdict
 from binascii import unhexlify
 import contextlib
+import csv
 import io
 from enum import Enum
 
@@ -32,6 +33,8 @@ def main():
     parser = argparse.ArgumentParser(description="PCAP Decoder")
     parser.add_argument("--input-file", help="Path to the PCAP file")
     parser.add_argument("--output-dir",help="Directory for the output log file")
+    parser.add_argument("--raw-only", action="store_true",
+                        help="Only write a <pcap name>.csv of timestamp and raw payload; skip decoding")
     args = parser.parse_args()
 
     # File path can be given by a command line argument or chosen with a UI
@@ -64,12 +67,25 @@ def main():
         decodedFile = decoder_helper.formatFileName(file)
         decoded_path     = os.path.join(decoded_dir, decodedFile)
         
-    w = open(decoded_path, 'w')
-
     # Extract packets from the PCAP file
     packets = decoder_helper.extract_packets(file)
     if not packets:
         raise ValueError("No UDP packets found in the selected file. Exiting.")
+
+    # Raw payload CSV (timestamp, payload)
+    raw_csv_path = os.path.join(decoded_dir, os.path.basename(file).replace('.pcap', '.csv'))
+    with open(raw_csv_path, 'w', newline='') as raw_csv_file:
+        raw_csv = csv.writer(raw_csv_file)
+        raw_csv.writerow(['timestamp', 'payload'])
+        for timestamp in sorted(packets.keys()):
+            for line in packets[timestamp]:
+                raw_csv.writerow([f'{timestamp:.6f}', line.lower()])
+
+    if args.raw_only:
+        print('\nRaw payload export complete. Check', raw_csv_path, '\n')
+        sys.exit(0)
+
+    w = open(decoded_path, 'w')
 
     # Iterate per timestamp preserving chronological order
     for timestamp in sorted(packets.keys()):
@@ -102,7 +118,7 @@ def main():
     decoder_helper.writeIpgStats(sys.stdout, msgId_timestamps)
     w.close()
 
-    print('\nDecoding Complete. Check', decodedFile, '\n')
+    print('\nDecoding Complete. Check', decodedFile, 'and', raw_csv_path, '\n')
     sys.exit(0)
 
 if __name__=="__main__":
