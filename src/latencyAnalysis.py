@@ -374,7 +374,7 @@ def plot_latency(rows: list[dict], out_dir: Path, stem: str) -> list[Path]:
         fig, (ax_box, ax_hist) = plt.subplots(
             2, 1, sharex=True, figsize=(8, 5), dpi=300, facecolor=_SURFACE,
             gridspec_kw=dict(height_ratios=[1, 4], hspace=0.05))
-        _boxplot(ax_box, e2e, vert=False)
+        _boxplot(ax_box, e2e, orientation="horizontal")
         ax_box.set_yticks([])
         ax_box.grid(axis="y", visible=False)
 
@@ -415,7 +415,7 @@ def plot_latency(rows: list[dict], out_dir: Path, stem: str) -> list[Path]:
         fig, ax = plt.subplots(figsize=(8, 4), dpi=150, facecolor=_SURFACE)
         positions = list(range(len(stages), 0, -1))
         for pos, s in zip(positions, stages):
-            _boxplot(ax, [lat[s]], color=STAGE_COLORS[s], positions=[pos], vert=False)
+            _boxplot(ax, [lat[s]], color=STAGE_COLORS[s], positions=[pos], orientation="horizontal")
             median = statistics.median(lat[s])
             ax.annotate(f"median {median:.1f}", xy=(median, pos + 0.3), ha="left", va="bottom",
                         color=_TEXT_2, fontsize=9)
